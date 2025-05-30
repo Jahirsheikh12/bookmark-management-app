@@ -168,8 +168,100 @@ export default function SettingsPage() {
   if (profileLoading || preferencesLoading) {
     return (
       <DashboardShell>
-        <div className="flex items-center justify-center h-96">
-          <Loader2 className="h-8 w-8 animate-spin" />
+        <div className="flex flex-col space-y-6">
+          {/* Header Skeleton */}
+          <div className="space-y-2">
+            <div className="h-8 w-32 bg-primary/10 rounded animate-pulse" />
+            <div className="h-5 w-80 bg-primary/10 rounded animate-pulse" />
+          </div>
+
+          <div className="grid gap-6">
+            {/* Profile Settings Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="space-y-2">
+                  <div className="h-6 w-32 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-4 w-48 bg-primary/10 rounded animate-pulse" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="h-4 w-24 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-10 w-full bg-primary/10 rounded animate-pulse" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 w-16 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-10 w-full bg-primary/10 rounded animate-pulse" />
+                </div>
+                <div className="h-10 w-28 bg-primary/10 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+
+            {/* Preferences Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="space-y-2">
+                  <div className="h-6 w-28 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-4 w-64 bg-primary/10 rounded animate-pulse" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 bg-primary/10 rounded animate-pulse" />
+                    <div className="h-3 w-48 bg-primary/10 rounded animate-pulse" />
+                  </div>
+                  <div className="h-6 w-11 bg-primary/10 rounded-full animate-pulse" />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="space-y-2">
+                    <div className="h-4 w-36 bg-primary/10 rounded animate-pulse" />
+                    <div className="h-3 w-52 bg-primary/10 rounded animate-pulse" />
+                  </div>
+                  <div className="h-6 w-11 bg-primary/10 rounded-full animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Data Management Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="space-y-2">
+                  <div className="h-6 w-36 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-4 w-56 bg-primary/10 rounded animate-pulse" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <div className="h-4 w-32 bg-primary/10 rounded animate-pulse" />
+                    <div className="h-3 w-48 bg-primary/10 rounded animate-pulse" />
+                  </div>
+                  <div className="h-10 w-28 bg-primary/10 rounded animate-pulse" />
+                </div>
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <div className="h-4 w-36 bg-primary/10 rounded animate-pulse" />
+                    <div className="h-3 w-52 bg-primary/10 rounded animate-pulse" />
+                  </div>
+                  <div className="h-10 w-40 bg-primary/10 rounded animate-pulse" />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Danger Zone Card Skeleton */}
+            <Card>
+              <CardHeader>
+                <div className="space-y-2">
+                  <div className="h-6 w-28 bg-primary/10 rounded animate-pulse" />
+                  <div className="h-4 w-48 bg-primary/10 rounded animate-pulse" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-10 w-32 bg-destructive/10 rounded animate-pulse" />
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </DashboardShell>
     );

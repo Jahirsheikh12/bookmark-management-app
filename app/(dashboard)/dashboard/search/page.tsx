@@ -84,36 +84,44 @@ export default function SearchPage() {
   return (
     <DashboardShell>
       <div className="flex flex-col space-y-6">
-        <div>
+        <div className="w-full flex items-center justify-center flex-col gap-2">
           <h1 className="text-2xl font-bold tracking-tight">
             Search Bookmarks
           </h1>
           <p className="text-muted-foreground">
             Search through your bookmarks by title, URL, description, or notes
           </p>
+
+          <form
+            onSubmit={handleSearch}
+            className="flex w-full items-center justify-center mt-4 gap-2"
+          >
+            <Input
+              type="search"
+              placeholder="Search bookmarks..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              className="max-w-xl"
+            />
+            <Button type="submit" disabled={isLoading}>
+              <SearchIcon className="mr-2 h-4 w-4" />
+              {isLoading ? "Searching..." : "Search"}
+            </Button>
+          </form>
         </div>
 
-        <form onSubmit={handleSearch} className="flex gap-2">
-          <Input
-            type="search"
-            placeholder="Search bookmarks..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            className="max-w-xl"
-          />
-          <Button type="submit" disabled={isLoading}>
-            <SearchIcon className="mr-2 h-4 w-4" />
-            {isLoading ? "Searching..." : "Search"}
-          </Button>
-        </form>
-
         {isLoading && query.length >= 2 && (
-          <div className="text-center py-4 text-muted-foreground">
-            Searching...
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Searching...</h2>
+            <BookmarkList
+              bookmarks={[]}
+              isLoading={true}
+              onBookmarkUpdate={handleBookmarkUpdate}
+            />
           </div>
         )}
 
-        {results.length > 0 && (
+        {results.length > 0 && !isLoading && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">
               Search Results ({results.length} found)

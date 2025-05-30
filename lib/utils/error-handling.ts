@@ -158,12 +158,12 @@ export const errorHandler = new ErrorHandler();
 export function asyncErrorHandler<T extends (...args: any[]) => Promise<any>>(
   fn: T
 ): T {
-  return ((...args: Parameters<T>) => {
-    return fn(...args).catch((error) => {
+  return async function (this: ThisParameterType<T>, ...args: Parameters<T>) {
+    return fn.apply(this, args).catch((error) => {
       const handled = errorHandler.handle(error);
       throw new AppError(handled.message, handled.type, handled.statusCode);
     });
-  }) as T;
+  } as T;
 }
 
 /**

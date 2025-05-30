@@ -69,12 +69,12 @@ export default function DashboardShell({ children }: DashboardShellProps) {
         </div>
       </header>
 
-      <div className="container flex-1 items-start md:grid md:grid-cols-[220px_1fr] md:gap-6 lg:grid-cols-[240px_1fr] lg:gap-10 px-4">
+      <div className="w-full flex-1 items-start md:grid md:grid-cols-[220px_1fr] md:gap-6 lg:grid-cols-[240px_1fr] lg:gap-10 px-4">
         <aside className="fixed top-16 z-30 -ml-2 hidden h-[calc(100vh-4rem)] w-full shrink-0 overflow-y-auto border-r py-6 pr-2 md:sticky md:block">
           <DashboardNav />
         </aside>
 
-        <main className="flex w-full flex-col overflow-hidden py-6 space-y-6">
+        <main className="flex w-full flex-col overflow-hidden py-6 space-y-6 max-w-7xl mx-auto">
           {children}
         </main>
       </div>

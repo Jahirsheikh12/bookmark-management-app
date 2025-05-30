@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Edit, MoreHorizontal, Tag, Trash } from "lucide-react";
+import { TagCardSkeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,10 +31,25 @@ import { useRouter } from "next/navigation";
 interface TagProps {
   tags: any[];
   onTagUpdate?: () => void;
+  isLoading?: boolean;
 }
 
-export default function TagList({ tags, onTagUpdate }: TagProps) {
+export default function TagList({
+  tags,
+  onTagUpdate,
+  isLoading = false,
+}: TagProps) {
   const [view, setView] = useState<"grid" | "list">("grid");
+
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <TagCardSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
 
   if (!tags || tags.length === 0) {
     return <div className="text-center py-10">No tags found.</div>;

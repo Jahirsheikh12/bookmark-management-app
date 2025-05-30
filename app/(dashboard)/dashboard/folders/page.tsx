@@ -8,6 +8,7 @@ import DashboardShell from "@/components/dashboard/dashboard-shell";
 import FolderList from "@/components/dashboard/folder-list";
 import EmptyState from "@/components/dashboard/empty-state";
 import { Button } from "@/components/ui/button";
+import { FolderCardSkeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
@@ -55,12 +56,21 @@ export default function FoldersPage() {
   if (isLoading) {
     return (
       <DashboardShell>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="text-lg font-medium">Loading...</div>
-            <div className="text-sm text-muted-foreground">
-              Please wait while we load your folders
+        <div className="space-y-8">
+          {/* Header Section */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <div className="h-8 w-32 bg-primary/10 rounded animate-pulse" />
+              <div className="h-5 w-64 bg-primary/10 rounded animate-pulse" />
             </div>
+            <div className="h-10 w-32 bg-primary/10 rounded animate-pulse" />
+          </div>
+
+          {/* Folder Grid Skeleton */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
+            {Array.from({ length: 8 }).map((_, index) => (
+              <FolderCardSkeleton key={index} />
+            ))}
           </div>
         </div>
       </DashboardShell>
@@ -69,30 +79,34 @@ export default function FoldersPage() {
 
   return (
     <DashboardShell>
-      <div className="flex flex-col space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">Folders</h1>
-            <p className="text-muted-foreground">
+      <div className="space-y-8">
+        {/* Header Section */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
+              Folders
+            </h1>
+            <p className="text-muted-foreground text-sm sm:text-base">
               Organize your bookmarks into folders
             </p>
           </div>
-          <Link href="/dashboard/folders/new">
-            <Button>
+          <Button asChild>
+            <Link href="/dashboard/folders/new">
               <Plus className="mr-2 h-4 w-4" />
               New Folder
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
-        {folders && folders.length > 0 ? (
+        {/* Folders Content */}
+        {folders.length > 0 ? (
           <FolderList folders={folders} onFolderUpdate={handleFolderUpdate} />
         ) : (
           <EmptyState
             title="No folders yet"
             description="Create your first folder to organize your bookmarks."
             action={{
-              label: "New Folder",
+              label: "Create Folder",
               href: "/dashboard/folders/new",
             }}
           />

@@ -14,7 +14,7 @@ export function useTags() {
       if (!response.success) {
         throw new Error(response.error);
       }
-      return response.data!;
+      return response.data;
     },
   });
 }
@@ -29,7 +29,7 @@ export function useCreateTag() {
       if (!response.success) {
         throw new Error(response.error);
       }
-      return response.data!;
+      return response.data;
     },
     onSuccess: () => {
       // Invalidate and refetch tag queries

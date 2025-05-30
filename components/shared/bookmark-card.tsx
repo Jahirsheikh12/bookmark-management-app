@@ -37,7 +37,7 @@ export function BookmarkCard({
       transition={{ duration: 0.3, delay: index * 0.05 }}
       className={className}
     >
-      <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-sm hover:scale-[1.02]">
+      <Card className="h-full flex flex-col overflow-hidden hover:shadow-lg transition-all duration-300 border shadow-sm hover:scale-[1.02]">
         <CardHeader className="p-4 pb-3 flex flex-row justify-between items-start space-y-0">
           <div className="flex-1 min-w-0">
             {bookmark.favicon && (
