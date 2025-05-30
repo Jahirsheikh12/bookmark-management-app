@@ -12,8 +12,7 @@ import {
 } from "@/components/ui/command";
 import { Bookmark, Folder, Search as SearchIcon, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
-import { Database } from "@/types/supabase";
+import { useSearchBookmarks } from "@/hooks/use-bookmarks";
 
 interface SearchResult {
   id: string;
@@ -26,11 +25,9 @@ interface SearchResult {
 export function Search() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResult[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClientComponentClient<Database>();
 
+  // Keyboard shortcut handler
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
@@ -43,77 +40,24 @@ export function Search() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // Use TanStack Query for search
+  const { data: searchResults = [], isLoading } = useSearchBookmarks(query);
+
+  // Transform bookmark results to search results
+  const results: SearchResult[] = searchResults.map((bookmark) => ({
+    id: bookmark.id,
+    title: bookmark.title,
+    type: "bookmark" as const,
+    url: bookmark.url,
+    description: bookmark.description || undefined,
+  }));
+
+  // Clear results when dialog closes
   useEffect(() => {
-    const searchData = async () => {
-      if (!query.trim() || query.length < 2) {
-        setResults([]);
-        return;
-      }
-
-      setIsLoading(true);
-      try {
-        const { data: session } = await supabase.auth.getSession();
-        if (!session.session) return;
-
-        const searchTerm = `%${query}%`;
-
-        // Search bookmarks
-        const { data: bookmarks } = await supabase
-          .from("bookmarks")
-          .select("id, title, url, description")
-          .or(
-            `title.ilike.${searchTerm},description.ilike.${searchTerm},url.ilike.${searchTerm}`
-          )
-          .eq("user_id", session.session.user.id)
-          .limit(10);
-
-        // Search folders
-        const { data: folders } = await supabase
-          .from("folders")
-          .select("id, name")
-          .ilike("name", searchTerm)
-          .eq("user_id", session.session.user.id)
-          .limit(5);
-
-        // Search tags
-        const { data: tags } = await supabase
-          .from("tags")
-          .select("id, name")
-          .ilike("name", searchTerm)
-          .eq("user_id", session.session.user.id)
-          .limit(5);
-
-        const searchResults: SearchResult[] = [
-          ...(bookmarks || []).map((bookmark) => ({
-            id: bookmark.id,
-            title: bookmark.title,
-            type: "bookmark" as const,
-            url: bookmark.url,
-            description: bookmark.description || undefined,
-          })),
-          ...(folders || []).map((folder) => ({
-            id: folder.id,
-            title: folder.name,
-            type: "folder" as const,
-          })),
-          ...(tags || []).map((tag) => ({
-            id: tag.id,
-            title: tag.name,
-            type: "tag" as const,
-          })),
-        ];
-
-        setResults(searchResults);
-      } catch (error) {
-        console.error("Search error:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    const debounceTimer = setTimeout(searchData, 300);
-    return () => clearTimeout(debounceTimer);
-  }, [query, supabase]);
+    if (!open) {
+      setQuery("");
+    }
+  }, [open]);
 
   const handleSelect = (result: SearchResult) => {
     setOpen(false);
@@ -128,6 +72,11 @@ export function Search() {
         router.push(`/dashboard/tags/${result.id}`);
         break;
     }
+  };
+
+  const handleQuickAccess = (path: string) => {
+    setOpen(false);
+    router.push(path);
   };
 
   return (
@@ -146,6 +95,7 @@ export function Search() {
           <span className="text-xs">⌘</span>K
         </kbd>
       </Button>
+
       <CommandDialog open={open} onOpenChange={setOpen}>
         <CommandInput
           placeholder="Search bookmarks, folders, tags..."
@@ -166,30 +116,21 @@ export function Search() {
             <CommandGroup heading="Quick Access">
               <CommandItem
                 className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                onSelect={() => {
-                  setOpen(false);
-                  router.push("/dashboard/bookmarks");
-                }}
+                onSelect={() => handleQuickAccess("/dashboard/bookmarks")}
               >
                 <Bookmark className="mr-2 h-4 w-4 text-blue-500" />
                 <span>All Bookmarks</span>
               </CommandItem>
               <CommandItem
                 className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                onSelect={() => {
-                  setOpen(false);
-                  router.push("/dashboard/folders");
-                }}
+                onSelect={() => handleQuickAccess("/dashboard/folders")}
               >
                 <Folder className="mr-2 h-4 w-4 text-yellow-500" />
                 <span>Browse Folders</span>
               </CommandItem>
               <CommandItem
                 className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                onSelect={() => {
-                  setOpen(false);
-                  router.push("/dashboard/tags");
-                }}
+                onSelect={() => handleQuickAccess("/dashboard/tags")}
               >
                 <Tag className="mr-2 h-4 w-4 text-green-500" />
                 <span>Browse Tags</span>
@@ -198,68 +139,37 @@ export function Search() {
           )}
 
           {results.length > 0 && (
-            <>
-              {results.filter((r) => r.type === "bookmark").length > 0 && (
-                <CommandGroup heading="Bookmarks">
-                  {results
-                    .filter((r) => r.type === "bookmark")
-                    .map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                        onSelect={() => handleSelect(result)}
-                      >
-                        <Bookmark className="mr-2 h-4 w-4 text-blue-500" />
-                        <div className="flex flex-col items-start">
-                          <span>{result.title}</span>
-                          {result.url && (
-                            <span className="text-xs text-muted-foreground">
-                              {new URL(result.url).hostname}
-                            </span>
-                          )}
-                        </div>
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              )}
-
-              {results.filter((r) => r.type === "folder").length > 0 && (
-                <CommandGroup heading="Folders">
-                  {results
-                    .filter((r) => r.type === "folder")
-                    .map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                        onSelect={() => handleSelect(result)}
-                      >
-                        <Folder className="mr-2 h-4 w-4 text-yellow-500" />
-                        <span>{result.title}</span>
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              )}
-
-              {results.filter((r) => r.type === "tag").length > 0 && (
-                <CommandGroup heading="Tags">
-                  {results
-                    .filter((r) => r.type === "tag")
-                    .map((result) => (
-                      <CommandItem
-                        key={result.id}
-                        className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
-                        onSelect={() => handleSelect(result)}
-                      >
-                        <Tag className="mr-2 h-4 w-4 text-green-500" />
-                        <span>{result.title}</span>
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              )}
-            </>
+            <CommandGroup heading="Bookmarks">
+              {results.map((result) => (
+                <CommandItem
+                  key={result.id}
+                  className="flex items-center gap-2 px-3 py-2 text-sm rounded-lg"
+                  onSelect={() => handleSelect(result)}
+                >
+                  <Bookmark className="mr-2 h-4 w-4 text-blue-500" />
+                  <div className="flex flex-col items-start">
+                    <span>{result.title}</span>
+                    {result.url && (
+                      <span className="text-xs text-muted-foreground">
+                        {getHostname(result.url)}
+                      </span>
+                    )}
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
           )}
         </CommandList>
       </CommandDialog>
     </>
   );
+}
+
+// Helper function to safely extract hostname
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
+  }
 }

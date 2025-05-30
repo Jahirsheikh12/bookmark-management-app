@@ -136,6 +136,32 @@ export interface Database {
           avatar_url?: string | null;
         };
       };
+      user_preferences: {
+        Row: {
+          id: string;
+          user_id: string;
+          created_at: string;
+          updated_at: string;
+          auto_fetch_metadata: boolean;
+          email_notifications: boolean;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          created_at?: string;
+          updated_at?: string;
+          auto_fetch_metadata?: boolean;
+          email_notifications?: boolean;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          created_at?: string;
+          updated_at?: string;
+          auto_fetch_metadata?: boolean;
+          email_notifications?: boolean;
+        };
+      };
     };
     Views: {
       [_ in never]: never;

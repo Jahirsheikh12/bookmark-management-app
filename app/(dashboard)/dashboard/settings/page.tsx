@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import DashboardShell from "@/components/dashboard/dashboard-shell";
 import { Button } from "@/components/ui/button";
@@ -17,23 +17,92 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
 import { Database } from "@/types/supabase";
+import {
+  useUserProfile,
+  useUserPreferences,
+  useUpdateProfile,
+  useUpdatePreferences,
+  useDeleteAccount,
+  useImportBookmarks,
+} from "@/hooks/use-user";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 
 export default function SettingsPage() {
   const router = useRouter();
   const supabase = createClientComponentClient<Database>();
-  const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Form states
+  const [profileName, setProfileName] = useState("");
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Query hooks
+  const { data: userProfile, isLoading: profileLoading } = useUserProfile();
+  const { data: preferences, isLoading: preferencesLoading } =
+    useUserPreferences();
+
+  // Mutation hooks
+  const updateProfileMutation = useUpdateProfile();
+  const updatePreferencesMutation = useUpdatePreferences();
+  const deleteAccountMutation = useDeleteAccount();
+  const importBookmarksMutation = useImportBookmarks();
+
+  // Initialize form when data is loaded
+  useEffect(() => {
+    if (userProfile?.profile?.full_name && !profileName) {
+      setProfileName(userProfile.profile.full_name);
+    }
+  }, [userProfile?.profile?.full_name, profileName]);
 
   const handleExport = async () => {
-    setIsLoading(true);
+    setIsExporting(true);
     try {
-      const { data: bookmarks } = await supabase
-        .from("bookmarks")
-        .select("*, folders(name), bookmark_tags(tags(name))");
+      // First get all bookmarks with folder information
+      const { data: bookmarksData, error: bookmarksError } =
+        await supabase.from("bookmarks").select(`
+          *,
+          folders:folder_id(name)
+        `);
+
+      if (bookmarksError) throw bookmarksError;
+
+      // Then get tag information for each bookmark
+      const bookmarksWithTags = await Promise.all(
+        (bookmarksData || []).map(async (bookmark) => {
+          const { data: tagData } = await supabase
+            .from("bookmark_tags")
+            .select(
+              `
+              tags:tag_id(
+                name,
+                color
+              )
+            `
+            )
+            .eq("bookmark_id", bookmark.id);
+
+          return {
+            ...bookmark,
+            tags: tagData?.map((item) => item.tags) || [],
+          };
+        })
+      );
 
       const exportData = {
         version: "1.0",
         exported_at: new Date().toISOString(),
-        bookmarks: bookmarks,
+        bookmarks: bookmarksWithTags,
       };
 
       const blob = new Blob([JSON.stringify(exportData, null, 2)], {
@@ -61,9 +130,50 @@ export default function SettingsPage() {
         description: "Failed to export bookmarks. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setIsExporting(false);
     }
   };
+
+  const handleProfileUpdate = () => {
+    if (profileName.trim()) {
+      updateProfileMutation.mutate({ full_name: profileName.trim() });
+    }
+  };
+
+  const handlePreferenceChange = (key: string, value: boolean) => {
+    updatePreferencesMutation.mutate({ [key]: value });
+  };
+
+  const handleImport = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      importBookmarksMutation.mutate(file);
+      // Reset the input
+      event.target.value = "";
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    deleteAccountMutation.mutate(undefined, {
+      onSuccess: () => {
+        router.push("/login");
+      },
+    });
+  };
+
+  if (profileLoading || preferencesLoading) {
+    return (
+      <DashboardShell>
+        <div className="flex items-center justify-center h-96">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </DashboardShell>
+    );
+  }
 
   return (
     <DashboardShell>
@@ -84,18 +194,35 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Display Name</Label>
-                <Input id="name" placeholder="Your name" />
+                <Input
+                  id="name"
+                  placeholder="Your name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="your@email.com"
+                  value={userProfile?.user?.email || ""}
                   disabled
                 />
               </div>
-              <Button>Save Changes</Button>
+              <Button
+                onClick={handleProfileUpdate}
+                disabled={
+                  updateProfileMutation.isPending ||
+                  !profileName.trim() ||
+                  profileName === userProfile?.profile?.full_name
+                }
+              >
+                {updateProfileMutation.isPending && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                Save Changes
+              </Button>
             </CardContent>
           </Card>
 
@@ -114,7 +241,13 @@ export default function SettingsPage() {
                     Automatically fetch title and favicon when adding bookmarks
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={preferences?.auto_fetch_metadata ?? true}
+                  onCheckedChange={(checked) =>
+                    handlePreferenceChange("auto_fetch_metadata", checked)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
@@ -123,7 +256,13 @@ export default function SettingsPage() {
                     Receive email notifications about your bookmarks
                   </p>
                 </div>
-                <Switch />
+                <Switch
+                  checked={preferences?.email_notifications ?? false}
+                  onCheckedChange={(checked) =>
+                    handlePreferenceChange("email_notifications", checked)
+                  }
+                  disabled={updatePreferencesMutation.isPending}
+                />
               </div>
             </CardContent>
           </Card>
@@ -143,8 +282,15 @@ export default function SettingsPage() {
                     Download all your bookmarks as a JSON file
                   </p>
                 </div>
-                <Button onClick={handleExport} disabled={isLoading}>
-                  {isLoading ? "Exporting..." : "Export Data"}
+                <Button onClick={handleExport} disabled={isExporting}>
+                  {isExporting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    "Export Data"
+                  )}
                 </Button>
               </div>
               <div className="grid gap-4">
@@ -155,8 +301,27 @@ export default function SettingsPage() {
                   </p>
                 </div>
                 <div className="grid gap-2">
-                  <Input type="file" accept=".json,.html" />
-                  <Button>Import</Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,.html"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={handleImport}
+                    disabled={importBookmarksMutation.isPending}
+                    variant="outline"
+                  >
+                    {importBookmarksMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      "Choose File to Import"
+                    )}
+                  </Button>
                 </div>
               </div>
             </CardContent>
@@ -170,7 +335,40 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="destructive">Delete Account</Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">Delete Account</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Are you absolutely sure?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This action cannot be undone. This will permanently delete
+                      your account and remove all your bookmarks, folders, and
+                      tags from our servers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={handleDeleteAccount}
+                      disabled={deleteAccountMutation.isPending}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      {deleteAccountMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        "Delete Account"
+                      )}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </CardContent>
           </Card>
         </div>
